@@ -30,7 +30,9 @@ Modern MLOps (Machine Learning Operations) frameworks consider containerization 
 
 **References**
 Boettiger, C. (2015). An introduction to Docker for reproducible research. ACM SIGOPS Operating Systems Review, 49(1), 71–79. https://doi.org/10.1145/2723872.2723882
+
 Kim, B. S., Lee, S. H., Lee, Y. R., Park, Y. H., & Jeong, J. (2022). Design and Implementation of Cloud Docker Application Architecture Based on Machine Learning in Container Management for Smart Manufacturing. Applied Sciences, 12(13), 6737. https://doi.org/10.3390/app12136737
+
 Sarcouncil Journal of Engineering and Computer Sciences. (2025). MLOps in the Enterprise Cloud: Orchestrating Machine Learning Pipelines. https://sarcouncil.com/download-article/SJECS-443-2025-545-551.pdf
 
 
