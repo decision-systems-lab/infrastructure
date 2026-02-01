@@ -3,3 +3,14 @@ services:
     build: ./streamlit
     ports:
       - "8501:8501"
+    volumes:
+      # Map the Streamlit app code
+      - ./streamlit:/app
+      # Map Python scripts (ingestion)
+      - ../src/ingestion:/app/src
+      # Map data for persistence
+      - ../data/duckdb:/app/data/duckdb
+      - ../data/raw:/app/data/raw
+      - ../data/processed:/app/data/processed
+      - ../data/external:/app/data/external
+    working_dir: /app

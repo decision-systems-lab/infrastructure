@@ -1,3 +1,5 @@
-streamlit==1.29.0
-duckdb==1.4.4
+streamlit
+duckdb
 pandas
+matplotlib
+seaborn
