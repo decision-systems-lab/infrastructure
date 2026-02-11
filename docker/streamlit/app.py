@@ -1,92 +1,103 @@
 import streamlit as st
 import duckdb
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # --- CONFIG ---
 DB_PATH = "/app/data/duckdb/decision_systems.duckdb"
 TABLE_NAME = "telco_churn_clean"
 
-# --- CONNECT TO DUCKDB ---
-con = duckdb.connect(database=DB_PATH, read_only=True)
-
 # --- PAGE CONFIG ---
-st.set_page_config(
-    page_title="Command Center Dashboard",
-    layout="wide"
-)
-st.title("🏗 Command Center Dashboard – Telco Churn")
+st.set_page_config(page_title="Command Center", layout="wide")
+st.title("🔍 Discovery Lab")
+st.markdown(f"Exploring table: `{TABLE_NAME}`")
 
-# --- LOAD DATA FUNCTION ---
+# --- DATABASE CONNECTION ---
+def get_connection():
+    return duckdb.connect(database=DB_PATH, read_only=True)
+
 @st.cache_data
-def load_data():
-    try:
+def load_full_data():
+    with get_connection() as con:
         df = con.execute(f"SELECT * FROM {TABLE_NAME}").df()
+        # Clean column names (strip spaces and lowercase)
+        df.columns = [c.strip().lower() for c in df.columns]
         return df
-    except duckdb.CatalogException:
-        st.warning(f"Table '{TABLE_NAME}' not found in DuckDB!")
-        return pd.DataFrame()
 
-# --- REFRESH BUTTON ---
-if st.button("🔄 Refresh DB"):
-    st.cache_data.clear()
-    st.success("Cache cleared! Data will reload on next access.")
+df = load_full_data()
 
-df = load_data()
+# --- SIDEBAR: TABLE INVENTORY ---
+st.sidebar.header("📋 Table Inventory")
+if st.sidebar.button("Show All Tables"):
+    with get_connection() as con:
+        tables = con.execute("SHOW TABLES").df()
+        st.sidebar.write(tables)
 
-# --- DASHBOARD ---
-if not df.empty:
-    # --- TOP KEY METRICS ---
-    st.subheader("📌 Key Metrics")
-    total_customers = len(df)
-    churn_count = df['churn'].sum() if 'churn' in df.columns else 0
-    churn_rate = churn_count / total_customers if total_customers > 0 else 0
-    avg_tenure = df['tenure'].mean() if 'tenure' in df.columns else 0
-    avg_monthly_charges = df['monthly_charges'].mean() if 'monthly_charges' in df.columns else 0
+st.sidebar.divider()
+st.sidebar.write(f"**Total Rows:** {df.shape[0]:,}")
+st.sidebar.write(f"**Total Columns:** {df.shape[1]}")
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Customers", total_customers)
-    col2.metric("Churn Count", churn_count)
-    col3.metric("Churn Rate", f"{churn_rate:.1%}")
-    col4.metric("Avg Tenure (months)", f"{avg_tenure:.1f}")
-    col4.metric("Avg Monthly Charges", f"${avg_monthly_charges:.2f}")
+# --- MAIN INTERFACE: TABS ---
+tab1, tab2, tab3 = st.tabs(["🧬 Schema Profile", "📊 Value Distribution", "💻 SQL Lab"])
 
-    # --- Layout: Numeric & Categorical Columns ---
-    col1, col2 = st.columns(2)
+# --- TAB 1: SCHEMA PROFILE ---
+with tab1:
+    st.subheader("Field Metadata & Health")
+    
+    # Calculate health metrics
+    null_counts = df.isnull().sum()
+    null_pct = (null_counts / len(df)) * 100
+    dtype_df = pd.DataFrame({
+        "Data Type": df.dtypes.astype(str),
+        "Missing Values": null_counts,
+        "Missing %": null_pct.map("{:.2f}%".format),
+        "Unique Values": df.nunique()
+    })
+    
+    st.dataframe(dtype_df, use_container_width=True)
+    
+    st.subheader("Statistical Summary")
+    st.dataframe(df.describe(include='all').T, use_container_width=True)
 
-    # --- Column 1: Numeric Overview ---
+# --- TAB 2: VALUE DISTRIBUTION ---
+with tab2:
+    st.subheader("Feature Inspection")
+    
+    selected_col = st.selectbox("Select a column to analyze:", df.columns)
+    
+    col1, col2 = st.columns([1, 2])
+    
     with col1:
-        st.subheader("📊 Numeric Columns")
-        numeric_cols = df.select_dtypes(include=["int64", "float64"]).columns.tolist()
-        if numeric_cols:
-            for col in numeric_cols:
-                st.markdown(f"**{col}**")
-                st.bar_chart(df[col].value_counts())
-        else:
-            st.info("No numeric columns detected.")
-
-    # --- Column 2: Categorical Overview ---
+        st.write(f"**Top 10 Values for `{selected_col}`**")
+        st.write(df[selected_col].value_counts().head(10))
+        
     with col2:
-        st.subheader("📂 Categorical Columns")
-        cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
-        if cat_cols:
-            for col in cat_cols:
-                st.markdown(f"**{col}**")
-                st.bar_chart(df[col].value_counts())
+        fig, ax = plt.subplots(figsize=(10, 5))
+        if df[selected_col].dtype in ['int64', 'float64']:
+            # Numerical Distribution
+            sns.histplot(df[selected_col], kde=True, color="teal", ax=ax)
+            ax.set_title(f"Histogram of {selected_col}")
         else:
-            st.info("No categorical columns detected.")
+            # Categorical Distribution
+            sns.countplot(data=df, y=selected_col, order=df[selected_col].value_counts().index[:15], palette="viridis", ax=ax)
+            ax.set_title(f"Top 15 Categories in {selected_col}")
+        
+        st.pyplot(fig)
 
-    # --- Bottom: Summary Stats ---
-    st.subheader("📋 Dataset Summary")
-    st.write(df.describe(include="all").T)
-
-    # --- Missing Values Heatmap ---
-    st.subheader("❌ Missing Values Heatmap")
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(figsize=(10, 4))
-    sns.heatmap(df.isnull(), cbar=False, cmap="magma", yticklabels=False, ax=ax)
-    st.pyplot(fig)
-
-else:
-    st.info("No data available. Make sure the DuckDB table is populated.")
+# --- TAB 3: SQL LAB ---
+with tab3:
+    st.subheader("Ad-hoc SQL Console")
+    st.info("Write standard SQL to query the DuckDB file directly.")
+    
+    default_query = f"SELECT * FROM {TABLE_NAME} WHERE tenure > 50 LIMIT 5"
+    user_query = st.text_area("SQL Query Editor", value=default_query, height=150)
+    
+    if st.button("Run Query"):
+        try:
+            with get_connection() as con:
+                query_result = con.execute(user_query).df()
+                st.success(f"Returned {len(query_result)} rows")
+                st.dataframe(query_result, use_container_width=True)
+        except Exception as e:
+            st.error(f"SQL Error: {e}")

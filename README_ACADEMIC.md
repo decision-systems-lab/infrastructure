@@ -1,5 +1,7 @@
 # Decision Systems Lab — Infrastructure (Phase 0)
 
+> For hands-on setup and usage, see [`README.md`](README.md).
+
 This repository contains the foundational infrastructure for projects under the **Decision Systems Lab**.
 
 ## What is the Decision Systems Lab?
