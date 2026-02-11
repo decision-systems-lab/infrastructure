@@ -4,7 +4,7 @@
 ![Phase 0 Status](https://img.shields.io/badge/Phase%200-Complete-brightgreen?style=for-the-badge)
 <!-- ![Phase 1 Status](https://img.shields.io/badge/Phase%201-Pending-lightgrey?style=for-the-badge) -->
 
-Decision Systems Lab is an exploratory environment for building **production-grade decision systems** that move beyond prediction to recommend, justify, and monitor actions in high-stakes environments.
+Decision Systems Lab is an exploratory environment for building **production-grade decision systems** that move beyond outputs to recommend, justify, and monitor actions in high-stakes environments.
 
 Phase 0 establishes the infrastructure required to build those systems correctly.
 
